@@ -1,0 +1,25 @@
+pipeline:
+  input:
+    type: "json"  # Specify input type: "json"
+    config:
+      filePath: "" # Path to the input JSON file (to be set dynamically)
+      parseMode: "" # "array" for list of objects, "object" for a single JSON object
+
+  transformations:
+    filter:
+      - key: "*" # Apply to all keys
+        condition: "" # Specify condition dynamically (e.g., "> 10", "contains 'value'")
+
+    mapping:
+      dynamic_mapping: true # Automatically process key transformations (e.g., lowercase keys)
+      custom_mapping: [] # Optional: Leave blank or define dynamically
+
+    aggregation:
+      - operation: "" # Specify operation dynamically (e.g., "sum", "count")
+        key: "*" # Operate on all keys (specific keys can be defined in runtime)
+        as: "" # Specify output key dynamically (e.g., "sum_<key>")
+
+  output:
+    type: "json"  # Specify output type: "json"
+    config:
+      filePath: "" # Path to the output JSON file (to be set dynamically)
