@@ -1,76 +1,90 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"fmt"
 	"log"
-	"os"
 
+	firebase "firebase.google.com/go"
+	"github.com/avii09/hookit/pkg/config"
 	"github.com/avii09/hookit/pkg/input"
 	"github.com/avii09/hookit/pkg/output"
 	"github.com/avii09/hookit/pkg/transform"
-	"gopkg.in/yaml.v2"
+	"google.golang.org/api/option"
 )
 
-// Config structure for the pipeline
-type Config struct {
-    Pipeline struct {
-        Input           map[string]interface{}        `yaml:"input"`
-        Transformations transform.TransformationRules `yaml:"transformations"`
-        Output          map[string]interface{}        `yaml:"output"`
-    } `yaml:"pipeline"`
+func main() {
+    // Define the pipeline type flag
+    pipelineType := flag.String("pipeline", "csv", "Specify the pipeline type: csv or firebase")
+    flag.Parse()
+
+    var configFilePath string
+    if *pipelineType == "firebase" {
+        configFilePath = "config/firebase.yaml"
+    } else {
+        configFilePath = "config/csv.yaml"
+    }
+
+    // Load the configuration file
+    cfg, err := config.LoadConfig(configFilePath)
+    if err != nil {
+        log.Fatalf("error loading config file: %v", err)
+    }
+
+    if *pipelineType == "firebase" {
+        runFirebasePipeline(cfg)
+    } else {
+        runCSVPipeline(cfg)
+    }
 }
 
-func main() {
-    // Step 1: Load the YAML configuration file
-    configFile, err := os.ReadFile("config/pipeline.yaml")
+func runFirebasePipeline(cfg config.Config) {
+    // Initialize Firebase app
+    opt := option.WithCredentialsFile("firebase-adminsdk.json")
+    app, err := firebase.NewApp(context.Background(), nil, opt)
     if err != nil {
-        log.Fatalf("Failed to read YAML config file: %v", err)
+        log.Fatalf("error initializing app: %v", err)
     }
 
-    var config Config
-    err = yaml.Unmarshal(configFile, &config)
+    // Initialize Firestore client
+    client, err := app.Firestore(context.Background())
     if err != nil {
-        log.Fatalf("Failed to parse YAML config: %v", err)
+        log.Fatalf("error initializing Firestore: %v", err)
     }
+    defer client.Close()
 
-    // Step 2: Extract input configuration and read input data
-    inputConfig, ok := config.Pipeline.Input["config"].(map[interface{}]interface{})
-    if !ok {
-        log.Fatalf("Invalid input configuration format")
-    }
-
-    inputFilePath, ok := inputConfig["filePath"].(string)
-    if !ok {
-        log.Fatalf("Input file path is missing or invalid in configuration")
-    }
-
-    fmt.Printf("Reading input from: %s\n", inputFilePath)
-    data, err := input.ReadCSV(inputFilePath)
+    // Read data from Firebase
+    data, err := input.ReadFirebase(client, cfg.Pipeline.Input.Config.Collection)
     if err != nil {
-        log.Fatalf("Failed to read input CSV: %v", err)
-    }
-    fmt.Println("Input data successfully read!")
-
-    // Step 3: Apply transformations
-    fmt.Println("Applying transformations...")
-    transformedData := transform.ApplyTransformations(data, config.Pipeline.Transformations)
-    fmt.Println("Transformations applied successfully!")
-
-    // Step 4: Extract output configuration and write output data
-    outputConfig, ok := config.Pipeline.Output["config"].(map[interface{}]interface{})
-    if !ok {
-        log.Fatalf("Invalid output configuration format")
+        log.Fatalf("error reading data from Firebase: %v", err)
     }
 
-    outputFilePath, ok := outputConfig["filePath"].(string)
-    if !ok {
-        log.Fatalf("Output file path is missing or invalid in configuration")
+    // Apply transformations
+    transformedData := transform.ApplyFirebaseTransformations(data, cfg.Pipeline.Transformations.Mapping)
+
+    // Write data back to Firebase
+    if err := output.WriteFirebase(client, cfg.Pipeline.Output.Config.Collection, transformedData); err != nil {
+        log.Fatalf("error writing data to Firebase: %v", err)
     }
 
-    fmt.Printf("Writing transformed data to: %s\n", outputFilePath)
-    err = output.WriteCSV(outputFilePath, transformedData)
+    fmt.Println("Data transformed and written to Firebase successfully!")
+}
+
+func runCSVPipeline(cfg config.Config) {
+    // Read data from CSV
+    data, err := input.ReadCSV(cfg.Pipeline.Input.Config.FilePath)
     if err != nil {
-        log.Fatalf("Failed to write output CSV: %v", err)
+        log.Fatalf("error reading data from CSV: %v", err)
     }
-    fmt.Println("Data pipeline completed successfully!")
+
+    // Apply transformations
+    transformedData := transform.ApplyTransformations(data, cfg.Pipeline.Transformations)
+
+    // Write data to CSV
+    if err := output.WriteCSV(cfg.Pipeline.Output.Config.FilePath, transformedData); err != nil {
+        log.Fatalf("error writing data to CSV: %v", err)
+    }
+
+    fmt.Println("Data transformed and written to CSV successfully!")
 }

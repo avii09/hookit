@@ -1,0 +1,16 @@
+pipeline:
+  input:
+    type: "firebase"
+    config:
+      collection: "users" # Firestore collection name
+
+  transformations:
+    mapping:
+      name_change: "New Name" # Change the name field to "New Name"
+      add_field:
+        location: "India" # Add a new field called location with value "India"
+
+  output:
+    type: "firebase"
+    config:
+      collection: "users" # Firestore collection name
