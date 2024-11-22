@@ -2,33 +2,27 @@ pipeline:
   input:
     type: "csv"
     config:
-      filePath: "./data/input.csv"  # Path to the input CSV file
+      filePath: "./data/input.csv" # Path to the input CSV file
 
   transformations:
     filter:
-      - column: "*"                 # Apply to all numeric columns
-        condition: "> 10"           # Keep rows where all numeric columns have values > 10
-      - column: "age"               # Specific filter for column named "age" (if it exists)
-        condition: "> 25"           # Keep rows with age > 25
+      - column: "*" # Apply to all numeric columns
+        condition: "> 10" # Keep rows where all numeric columns have values > 10
+      - column: "age" # Specific filter for column named "age" (if it exists)
+        condition: "> 25" # Keep rows with age > 25
 
     mapping:
-      dynamic_mapping: true         # Automatically convert column names to lowercase
+      dynamic_mapping: true # Automatically convert column names to lowercase
 
     aggregation:
       - operation: "sum"
-        column: "*"                 # Sum all numeric columns
-        as: "sum_<column>"          # Add new columns for sums (e.g., sum_salary)
+        column: "*" # Sum all numeric columns
+        as: "sum_<column>" # Add new columns for sums (e.g., sum_salary)
       - operation: "count"
-        column: "*"                 # Count rows
+        column: "*" # Count rows
         as: "row_count"
-
-    add_fields:
-      - column: "processed_date"
-        value: "CURRENT_DATE"       # Add column "processed_date" with today's date
 
   output:
     type: "csv"
     config:
-      filePath: "./data/output.csv"  # Path to the output CSV file
-
-
+      filePath: "./data/output.csv" # Path to the output CSV file
