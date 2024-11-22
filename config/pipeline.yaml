@@ -1,6 +1,6 @@
 pipeline:
   input:
-    type: "csv"
+    type: "csv"  # Options: "csv", "json"
     config:
       filePath: "./data/input.csv" # Path to the input CSV file
 
@@ -23,6 +23,6 @@ pipeline:
         as: "row_count"
 
   output:
-    type: "csv"
+    type: "csv"  # Options: "csv", "json"
     config:
       filePath: "./data/output.csv" # Path to the output CSV file
