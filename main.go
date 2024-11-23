@@ -104,13 +104,13 @@ func runFirebasePipeline(cfg config.Config) {
 	opt := option.WithCredentialsFile("firebase-adminsdk.json")
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
-		log.Fatalf("error initializing app: %v", err)
+		log.Fatalf("error initializing Firebase app: %v", err)
 	}
 
 	// Initialize Firestore client
 	client, err := app.Firestore(context.Background())
 	if err != nil {
-		log.Fatalf("error initializing Firestore: %v", err)
+		log.Fatalf("error initializing Firestore client: %v", err)
 	}
 	defer client.Close()
 
@@ -123,10 +123,26 @@ func runFirebasePipeline(cfg config.Config) {
 	// Apply transformations
 	transformedData := transform.ApplyFirebaseTransformations(data, cfg.Pipeline.Transformations.Mapping)
 
-	// Write data back to Firebase
-	if err := output.WriteFirebase(client, cfg.Pipeline.Output.Config.Collection, transformedData); err != nil {
-		log.Fatalf("error writing data to Firebase: %v", err)
+	// Determine output type and write data accordingly
+	switch cfg.Pipeline.Output.Type {
+	case "firebase":
+		// Write transformed data back to Firebase
+		if err := output.WriteFirebase(client, cfg.Pipeline.Output.Config.Collection, transformedData); err != nil {
+			log.Fatalf("error writing data to Firebase: %v", err)
+		}
+		fmt.Println("Data transformed and written to Firebase successfully!")
+	case "json":
+		// Convert data to map[string]string for JSON output
+		stringData, err := input.ConvertMapToStringMap(transformedData)
+		if err != nil {
+			log.Fatalf("error converting data: %v", err)
+		}
+		// Write transformed data to JSON
+		if err := output.WriteJSON(cfg.Pipeline.Output.Config.FilePath, stringData); err != nil {
+			log.Fatalf("error writing data to JSON: %v", err)
+		}
+		fmt.Println("Data transformed and written to JSON successfully!")
+	default:
+		log.Fatalf("unsupported output type: %v", cfg.Pipeline.Output.Type)
 	}
-
-	fmt.Println("Data transformed and written to Firebase successfully!")
 }

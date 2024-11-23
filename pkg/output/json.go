@@ -8,16 +8,15 @@ import (
 
 // WriteJSON writes the transformed data to a JSON output file.
 func WriteJSON(filePath string, data []map[string]string) error {
-	// Marshal the data into JSON format.
+	// Marshal the data into JSON format with indentation.
 	dataBytes, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
-		return fmt.Errorf("error marshaling data to JSON: %v", err)
+		return fmt.Errorf("error marshaling data to JSON: %w", err)
 	}
 
-	// Write the JSON data to the output file.
-	err = os.WriteFile(filePath, dataBytes, 0644)
-	if err != nil {
-		return fmt.Errorf("error writing JSON to file: %v", err)
+	// Write the JSON data to the specified file path.
+	if err := os.WriteFile(filePath, dataBytes, 0644); err != nil {
+		return fmt.Errorf("error writing JSON to file: %w", err)
 	}
 
 	return nil
