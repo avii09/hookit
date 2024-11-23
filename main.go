@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	firebase "firebase.google.com/go"
 	"github.com/avii09/hookit/pkg/config"
@@ -36,6 +37,8 @@ func main() {
 		configFilePath = "config/json.yaml"
 	case "csv-to-json":
 		configFilePath = "config/csv_to_json.yaml"
+	case "json-to-csv":
+		configFilePath = "config/csv_to_json.yaml"
 	case "firebase":
 		configFilePath = "config/firebase.yaml"
 	default:
@@ -56,6 +59,8 @@ func main() {
 	case "json":
 		runJSONPipeline(cfg)
 	case "csv-to-json":
+		runCSVToJSONPipeline(cfg)
+	case "json-to-csv":
 		runCSVToJSONPipeline(cfg)
 	case "firebase":
 		runFirebasePipeline(cfg)
@@ -105,38 +110,59 @@ func runJSONPipeline(cfg config.Config) {
 }
 
 func runCSVToJSONPipeline(cfg config.Config) {
-	// Read data from CSV
-	data, err := input.ReadCSV(cfg.Pipeline.Input.Config.FilePath)
-	if err != nil {
-		log.Fatalf("error reading data from CSV: %v", err)
-	}
-
-	// Apply transformations (including conversion to JSON)
-	transformedData := transform.ApplyTransformations(data, cfg.Pipeline.Transformations)
-
-	// Convert transformedData (of type []map[string]string) to []map[string]interface{}
-	interfaceData := make([]map[string]interface{}, len(transformedData))
-	for i, row := range transformedData {
-		interfaceData[i] = make(map[string]interface{})
-		for key, value := range row {
-			interfaceData[i][key] = value
+	inputFilePath := cfg.Pipeline.Input.Config.FilePath
+	if strings.HasSuffix(inputFilePath, ".csv") {
+		// CSV Input
+		fmt.Println("Detected CSV input file")
+		data, err := input.ReadCSV(cfg.Pipeline.Input.Config.FilePath)
+		if err != nil {
+			log.Fatalf("error reading data from CSV: %v", err)
 		}
+
+		// Apply transformations (including conversion to JSON)
+		transformedData := transform.ApplyTransformations(data, cfg.Pipeline.Transformations)
+
+		// Convert transformedData (of type []map[string]string) to []map[string]interface{}
+		interfaceData := make([]map[string]interface{}, len(transformedData))
+		for i, row := range transformedData {
+			interfaceData[i] = make(map[string]interface{})
+			for key, value := range row {
+				interfaceData[i][key] = value
+			}
+		}
+
+		// Convert transformed CSV data to JSON format
+		jsonData := transform.CSVToJSON(interfaceData)
+
+		var jsonMap []map[string]string
+		if err := json.Unmarshal(jsonData, &jsonMap); err != nil {
+			log.Fatalf("error unmarshalling JSON data: %v", err)
+		}
+
+		// Write transformed data to JSON
+		if err := output.WriteJSON(cfg.Pipeline.Output.Config.FilePath, jsonMap); err != nil {
+			log.Fatalf("error writing data to JSON: %v", err)
+		}
+
+		fmt.Println("CSV data successfully transformed to JSON and written!")
+	} else if strings.HasSuffix(inputFilePath, ".json") {
+		data, err := input.ReadJSON(cfg.Pipeline.Input.Config.FilePath)
+		if err != nil {
+			log.Fatalf("error reading data from JSON: %v", err)
+		}
+		stringData := make([]map[string]string, len(data))
+		for i, row := range data {
+			stringData[i] = make(map[string]string)
+			for key, value := range row {
+				stringData[i][key] = fmt.Sprintf("%v", value) // Convert interface{} to string
+			}
+		}
+		transformedData := transform.ApplyTransformations(stringData, cfg.Pipeline.Transformations)
+		if err := output.WriteCSV(cfg.Pipeline.Output.Config.FilePath, transformedData); err != nil {
+			log.Fatalf("error writing data to CSV: %v", err)
+		}
+		fmt.Println("Data transformed and written to CSV successfully!")
 	}
-
-	// Convert transformed CSV data to JSON format
-	jsonData := transform.CSVToJSON(interfaceData)
-
-	var jsonMap []map[string]string
-	if err := json.Unmarshal(jsonData, &jsonMap); err != nil {
-		log.Fatalf("error unmarshalling JSON data: %v", err)
-	}
-
-	// Write transformed data to JSON
-	if err := output.WriteJSON(cfg.Pipeline.Output.Config.FilePath, jsonMap); err != nil {
-		log.Fatalf("error writing data to JSON: %v", err)
-	}
-
-	fmt.Println("CSV data successfully transformed to JSON and written!")
 }
 
 func runFirebasePipeline(cfg config.Config) {
