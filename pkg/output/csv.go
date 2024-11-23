@@ -18,11 +18,13 @@ func WriteCSV(filePath string, data []map[string]string) error {
 
 	// Write header row
 	if len(data) > 0 {
-		headers := []string{}
+		var headers []string
 		for key := range data[0] {
 			headers = append(headers, key)
 		}
-		writer.Write(headers)
+		if err := writer.Write(headers); err != nil {
+			return err
+		}
 
 		// Write rows
 		for _, row := range data {
@@ -30,7 +32,9 @@ func WriteCSV(filePath string, data []map[string]string) error {
 			for i, header := range headers {
 				record[i] = row[header]
 			}
-			writer.Write(record)
+			if err := writer.Write(record); err != nil {
+				return err
+			}
 		}
 	}
 

@@ -104,29 +104,60 @@ func runFirebasePipeline(cfg config.Config) {
 	opt := option.WithCredentialsFile("firebase-adminsdk.json")
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
-		log.Fatalf("error initializing app: %v", err)
+		log.Fatalf("Error initializing Firebase app: %v", err)
 	}
 
 	// Initialize Firestore client
 	client, err := app.Firestore(context.Background())
 	if err != nil {
-		log.Fatalf("error initializing Firestore: %v", err)
+		log.Fatalf("Error initializing Firestore client: %v", err)
 	}
-	defer client.Close()
+	defer func() {
+		if cerr := client.Close(); cerr != nil {
+			log.Printf("Error closing Firestore client: %v", cerr)
+		}
+	}()
 
 	// Read data from Firebase
 	data, err := input.ReadFirebase(client, cfg.Pipeline.Input.Config.Collection)
 	if err != nil {
-		log.Fatalf("error reading data from Firebase: %v", err)
+		log.Fatalf("Error reading data from Firebase collection '%s': %v", cfg.Pipeline.Input.Config.Collection, err)
 	}
 
 	// Apply transformations
 	transformedData := transform.ApplyFirebaseTransformations(data, cfg.Pipeline.Transformations.Mapping)
 
-	// Write data back to Firebase
-	if err := output.WriteFirebase(client, cfg.Pipeline.Output.Config.Collection, transformedData); err != nil {
-		log.Fatalf("error writing data to Firebase: %v", err)
+	// Determine output type and write data accordingly
+	switch cfg.Pipeline.Output.Type {
+	case "firebase":
+		// Write transformed data back to Firebase
+		if err := output.WriteFirebase(client, cfg.Pipeline.Output.Config.Collection, transformedData); err != nil {
+			log.Fatalf("Error writing transformed data to Firebase collection '%s': %v", cfg.Pipeline.Output.Config.Collection, err)
+		}
+		log.Println("Data transformed and written to Firebase successfully!")
+	case "json":
+		// Convert data to map[string]string for JSON output
+		stringData, err := input.ConvertMapToStringMap(transformedData)
+		if err != nil {
+			log.Fatalf("Error converting data for JSON output: %v", err)
+		}
+		// Write transformed data to JSON
+		if err := output.WriteJSON(cfg.Pipeline.Output.Config.FilePath, stringData); err != nil {
+			log.Fatalf("Error writing transformed data to JSON file '%s': %v", cfg.Pipeline.Output.Config.FilePath, err)
+		}
+		log.Println("Data transformed and written to JSON successfully!")
+	case "csv":
+		// Convert data to map[string]string for CSV output
+		stringData, err := input.ConvertMapToStringMap(transformedData)
+		if err != nil {
+			log.Fatalf("Error converting data for CSV output: %v", err)
+		}
+		// Write transformed data to CSV
+		if err := output.WriteCSV(cfg.Pipeline.Output.Config.FilePath, stringData); err != nil {
+			log.Fatalf("Error writing transformed data to CSV file '%s': %v", cfg.Pipeline.Output.Config.FilePath, err)
+		}
+		log.Println("Data transformed and written to CSV successfully!")
+	default:
+		log.Fatalf("Unsupported output type '%s'. Supported types are: 'firebase', 'json', 'csv'", cfg.Pipeline.Output.Type)
 	}
-
-	fmt.Println("Data transformed and written to Firebase successfully!")
 }

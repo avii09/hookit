@@ -11,6 +11,7 @@ pipeline:
         location: "India" # Add a new field called location with value "India"
 
   output:
-    type: "firebase"
+    type: "firebase" # Options: "firebase", "json"
     config:
-      collection: "users" # Firestore collection name
+      collection: "users" # Firestore collection name (only used if output type is "firebase")
+      filePath: "./data/output.json" # Path to the output JSON file (only used if output type is "json")
