@@ -1,0 +1,29 @@
+pipeline:
+  input:
+    type: "csv"  # Input type is CSV
+    config:
+      filePath: "./data/input.csv"  # Path to the input CSV file
+
+  transformations:
+    filter:
+      - column: "*"  # Apply to all numeric columns
+        condition: "> 10"  # Keep rows where all numeric columns have values > 10
+      - column: "age"  # Specific filter for column named "age"
+        condition: "> 25"  # Keep rows with age > 25
+
+    mapping:
+      dynamic_mapping: true  # Automatically map CSV column names as JSON keys
+
+    aggregation:
+      - operation: "sum"
+        column: "salary"  # Sum the 'salary' column
+        as: "total_salary"  # Output as 'total_salary'
+      - operation: "count"
+        column: "*"  # Count rows
+        as: "total_rows"
+
+  output:
+    type: "json"  # Output type is JSON
+    config:
+      filePath: "./data/output.json"  # Path to the output JSON file
+      pretty_print: true  # Optional: Format JSON output for readability

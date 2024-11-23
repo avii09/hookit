@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -33,6 +34,8 @@ func main() {
 		configFilePath = "config/csv.yaml"
 	case "json":
 		configFilePath = "config/json.yaml"
+	case "csv-to-json":
+		configFilePath = "config/csv_to_json.yaml"
 	case "firebase":
 		configFilePath = "config/firebase.yaml"
 	default:
@@ -52,6 +55,8 @@ func main() {
 		runCSVPipeline(cfg)
 	case "json":
 		runJSONPipeline(cfg)
+	case "csv-to-json":
+		runCSVToJSONPipeline(cfg)
 	case "firebase":
 		runFirebasePipeline(cfg)
 	}
@@ -97,6 +102,41 @@ func runJSONPipeline(cfg config.Config) {
 	}
 
 	fmt.Println("Data transformed and written to JSON successfully!")
+}
+
+func runCSVToJSONPipeline(cfg config.Config) {
+	// Read data from CSV
+	data, err := input.ReadCSV(cfg.Pipeline.Input.Config.FilePath)
+	if err != nil {
+		log.Fatalf("error reading data from CSV: %v", err)
+	}
+
+	// Apply transformations (including conversion to JSON)
+	transformedData := transform.ApplyTransformations(data, cfg.Pipeline.Transformations)
+
+	// Convert transformedData (of type []map[string]string) to []map[string]interface{}
+	interfaceData := make([]map[string]interface{}, len(transformedData))
+	for i, row := range transformedData {
+		interfaceData[i] = make(map[string]interface{})
+		for key, value := range row {
+			interfaceData[i][key] = value
+		}
+	}
+
+	// Convert transformed CSV data to JSON format
+	jsonData := transform.CSVToJSON(interfaceData)
+
+	var jsonMap []map[string]string
+	if err := json.Unmarshal(jsonData, &jsonMap); err != nil {
+		log.Fatalf("error unmarshalling JSON data: %v", err)
+	}
+
+	// Write transformed data to JSON
+	if err := output.WriteJSON(cfg.Pipeline.Output.Config.FilePath, jsonMap); err != nil {
+		log.Fatalf("error writing data to JSON: %v", err)
+	}
+
+	fmt.Println("CSV data successfully transformed to JSON and written!")
 }
 
 func runFirebasePipeline(cfg config.Config) {
