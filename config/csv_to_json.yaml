@@ -1,8 +1,8 @@
 pipeline:
   input:
-    type: "csv"  # Input type is CSV
+    type: "json"  # Input type is CSV
     config:
-      filePath: "./data/input.csv"  # Path to the input CSV file
+      filePath: "./data/input.json"  # Path to the input CSV file
 
   transformations:
     filter:
@@ -23,7 +23,7 @@ pipeline:
         as: "total_rows"
 
   output:
-    type: "json"  # Output type is JSON
+    type: "csv"  # Output type is JSON
     config:
-      filePath: "./data/output.json"  # Path to the output JSON file
+      filePath: "./data/output.csv"  # Path to the output JSON file
       pretty_print: true  # Optional: Format JSON output for readability
