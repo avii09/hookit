@@ -1,0 +1,25 @@
+pipeline:
+  input:
+    type: "json"
+    config:
+      filePath: "./data/input.json" # Path to the input JSON file
+
+  transformations:
+    json:
+      filter:
+        - key: "age"
+          condition: "> 25" # Keep records where 'age' is greater than 25
+
+      mapping:
+        dynamic_mapping: true # Enable dynamic mapping for JSON keys
+        custom_mapping: [] # Custom mappings can be added here, currently empty
+
+      aggregation:
+        - operation: "sum"
+          key: "salary" # Sum the 'salary' field
+          as: "total_salary" # Output the result as 'total_salary'
+
+  output:
+    type: "json"
+    config:
+      filePath: "./data/output.json" # Path to the output JSON file
