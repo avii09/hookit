@@ -1,25 +1,25 @@
 pipeline:
   input:
-    type: "json"  # Specify input type: "json"
+    type: "json"
     config:
-      filePath: "" # Path to the input JSON file (to be set dynamically)
-      parseMode: "" # "array" for list of objects, "object" for a single JSON object
+      filePath: "./data/input.json" # Path to the input JSON file
 
   transformations:
-    filter:
-      - key: "*" # Apply to all keys
-        condition: "" # Specify condition dynamically (e.g., "> 10", "contains 'value'")
+    json:
+      filter:
+        - key: "age"
+          condition: "> 25" # Keep records where 'age' is greater than 25
 
-    mapping:
-      dynamic_mapping: true # Automatically process key transformations (e.g., lowercase keys)
-      custom_mapping: [] # Optional: Leave blank or define dynamically
+      mapping:
+        dynamic_mapping: true # Enable dynamic mapping for JSON keys
+        custom_mapping: [] # Custom mappings can be added here, currently empty
 
-    aggregation:
-      - operation: "" # Specify operation dynamically (e.g., "sum", "count")
-        key: "*" # Operate on all keys (specific keys can be defined in runtime)
-        as: "" # Specify output key dynamically (e.g., "sum_<key>")
+      aggregation:
+        - operation: "sum"
+          key: "salary" # Sum the 'salary' field
+          as: "total_salary" # Output the result as 'total_salary'
 
   output:
-    type: "json"  # Specify output type: "json"
+    type: "json"
     config:
-      filePath: "" # Path to the output JSON file (to be set dynamically)
+      filePath: "./data/output.json" # Path to the output JSON file

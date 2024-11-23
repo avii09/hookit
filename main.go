@@ -1,131 +1,132 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
 
+	firebase "firebase.google.com/go"
+	"github.com/avii09/hookit/pkg/config"
 	"github.com/avii09/hookit/pkg/input"
 	"github.com/avii09/hookit/pkg/output"
 	"github.com/avii09/hookit/pkg/transform"
-	"gopkg.in/yaml.v2"
+	"google.golang.org/api/option"
 )
 
-// Config structure for the pipeline
-type Config struct {
-	Pipeline struct {
-		Input           map[string]interface{} `yaml:"input"`
-		Transformations interface{}            `yaml:"transformations"`
-		Output          map[string]interface{} `yaml:"output"`
-	} `yaml:"pipeline"`
+func main() {
+	// Define the pipeline type flag
+	pipelineType := flag.String("pipeline", "", "Specify the pipeline type: csv, json, or firebase")
+	flag.Parse()
+
+	// Validate if the flag is provided
+	if *pipelineType == "" {
+		fmt.Println("Error: Missing required flag '-pipeline'. Use '-pipeline=csv', '-pipeline=json', or '-pipeline=firebase'.")
+		os.Exit(1)
+	}
+
+	// Determine configuration file based on the pipeline type
+	var configFilePath string
+	switch *pipelineType {
+	case "csv":
+		configFilePath = "config/csv.yaml"
+	case "json":
+		configFilePath = "config/json.yaml"
+	case "firebase":
+		configFilePath = "config/firebase.yaml"
+	default:
+		fmt.Println("Error: Invalid pipeline type. Use '-pipeline=csv', '-pipeline=json', or '-pipeline=firebase'.")
+		os.Exit(1)
+	}
+
+	// Load the configuration file
+	cfg, err := config.LoadConfig(configFilePath)
+	if err != nil {
+		log.Fatalf("error loading config file: %v", err)
+	}
+
+	// Run the appropriate pipeline based on the flag
+	switch *pipelineType {
+	case "csv":
+		runCSVPipeline(cfg)
+	case "json":
+		runJSONPipeline(cfg)
+	case "firebase":
+		runFirebasePipeline(cfg)
+	}
 }
 
-func main() {
-	// Step 1: Load the YAML configuration file
-	configFile, err := os.ReadFile("config/pipeline.yaml")
+func runCSVPipeline(cfg config.Config) {
+	// Read data from CSV
+	data, err := input.ReadCSV(cfg.Pipeline.Input.Config.FilePath)
 	if err != nil {
-		log.Fatalf("Failed to read YAML config file: %v", err)
+		log.Fatalf("error reading data from CSV: %v", err)
 	}
 
-	var config Config
-	err = yaml.Unmarshal(configFile, &config)
+	// Apply transformations
+	transformedData := transform.ApplyTransformations(data, cfg.Pipeline.Transformations)
+
+	// Write data to CSV
+	if err := output.WriteCSV(cfg.Pipeline.Output.Config.FilePath, transformedData); err != nil {
+		log.Fatalf("error writing data to CSV: %v", err)
+	}
+
+	fmt.Println("Data transformed and written to CSV successfully!")
+}
+
+func runJSONPipeline(cfg config.Config) {
+	// Read data from JSON
+	data, err := input.ReadJSON(cfg.Pipeline.Input.Config.FilePath)
 	if err != nil {
-		log.Fatalf("Failed to parse YAML config: %v", err)
+		log.Fatalf("error reading data from JSON: %v", err)
 	}
 
-	// Step 2: Determine input type (CSV or JSON)
-	inputType, ok := config.Pipeline.Input["type"].(string)
-	if !ok {
-		log.Fatalf("Input type is missing or invalid in configuration")
+	// Convert data to map[string]string
+	stringData, err := input.ConvertMapToStringMap(data)
+	if err != nil {
+		log.Fatalf("error converting data: %v", err)
 	}
 
-	var data interface{}
-	switch inputType {
-	case "csv":
-		inputConfig, ok := config.Pipeline.Input["config"].(map[interface{}]interface{})
-		if !ok {
-			log.Fatalf("Invalid input configuration format for CSV")
-		}
+	// Apply transformations
+	transformedData := transform.ApplyTransformations(stringData, cfg.Pipeline.Transformations)
 
-		inputFilePath, ok := inputConfig["filePath"].(string)
-		if !ok {
-			log.Fatalf("Input file path is missing or invalid in configuration")
-		}
-
-		fmt.Printf("Reading input from CSV: %s\n", inputFilePath)
-		data, err = input.ReadCSV(inputFilePath)
-		if err != nil {
-			log.Fatalf("Failed to read CSV input: %v", err)
-		}
-
-	case "json":
-		inputConfig, ok := config.Pipeline.Input["config"].(map[interface{}]interface{})
-		if !ok {
-			log.Fatalf("Invalid input configuration format for JSON")
-		}
-
-		inputFilePath, ok := inputConfig["filePath"].(string)
-		if !ok {
-			log.Fatalf("Input file path is missing or invalid in configuration")
-		}
-
-		fmt.Printf("Reading input from JSON: %s\n", inputFilePath)
-		data, err = input.ReadJSON(inputFilePath)
-		if err != nil {
-			log.Fatalf("Failed to read JSON input: %v", err)
-		}
-
-	default:
-		log.Fatalf("Unsupported input type: %s", inputType)
+	// Write data to JSON
+	if err := output.WriteJSON(cfg.Pipeline.Output.Config.FilePath, transformedData); err != nil {
+		log.Fatalf("error writing data to JSON: %v", err)
 	}
 
-	// Step 3: Apply transformations based on the input type
-	fmt.Println("Applying transformations...")
-	var transformedData interface{}
-	switch inputType {
-	case "csv":
-		transformedData = transform.ApplyTransformations(data.([]map[string]string), config.Pipeline.Transformations)
-	case "json":
-		transformedData = transform.ApplyJSONTransformations(data.([]map[string]interface{}), config.Pipeline.Transformations)
+	fmt.Println("Data transformed and written to JSON successfully!")
+}
+
+func runFirebasePipeline(cfg config.Config) {
+	// Initialize Firebase app
+	opt := option.WithCredentialsFile("firebase-adminsdk.json")
+	app, err := firebase.NewApp(context.Background(), nil, opt)
+	if err != nil {
+		log.Fatalf("error initializing app: %v", err)
 	}
 
-	fmt.Println("Transformations applied successfully!")
+	// Initialize Firestore client
+	client, err := app.Firestore(context.Background())
+	if err != nil {
+		log.Fatalf("error initializing Firestore: %v", err)
+	}
+	defer client.Close()
 
-	// Step 4: Extract output configuration and write output data
-	outputConfig, ok := config.Pipeline.Output["config"].(map[interface{}]interface{})
-	if !ok {
-		log.Fatalf("Invalid output configuration format")
+	// Read data from Firebase
+	data, err := input.ReadFirebase(client, cfg.Pipeline.Input.Config.Collection)
+	if err != nil {
+		log.Fatalf("error reading data from Firebase: %v", err)
 	}
 
-	outputFilePath, ok := outputConfig["filePath"].(string)
-	if !ok {
-		log.Fatalf("Output file path is missing or invalid in configuration")
+	// Apply transformations
+	transformedData := transform.ApplyFirebaseTransformations(data, cfg.Pipeline.Transformations.Mapping)
+
+	// Write data back to Firebase
+	if err := output.WriteFirebase(client, cfg.Pipeline.Output.Config.Collection, transformedData); err != nil {
+		log.Fatalf("error writing data to Firebase: %v", err)
 	}
 
-	// Step 5: Write output based on the output type (CSV or JSON)
-	outputType, ok := config.Pipeline.Output["type"].(string)
-	if !ok {
-		log.Fatalf("Output type is missing or invalid in configuration")
-	}
-
-	switch outputType {
-	case "csv":
-		fmt.Printf("Writing transformed data to CSV: %s\n", outputFilePath)
-		err = output.WriteCSV(outputFilePath, transformedData)
-		if err != nil {
-			log.Fatalf("Failed to write output CSV: %v", err)
-		}
-
-	case "json":
-		fmt.Printf("Writing transformed data to JSON: %s\n", outputFilePath)
-		err = output.WriteJSON(outputFilePath, transformedData)
-		if err != nil {
-			log.Fatalf("Failed to write output JSON: %v", err)
-		}
-
-	default:
-		log.Fatalf("Unsupported output type: %s", outputType)
-	}
-
-	fmt.Println("Data pipeline completed successfully!")
+	fmt.Println("Data transformed and written to Firebase successfully!")
 }

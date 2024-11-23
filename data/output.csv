@@ -1,4 +1,0 @@
-name,age,salary,status,sum_age,sum_salary,sum_sum_age,row_count
-Alice,30,50000,active,87.00,165000.00,261.00,3
-Bob,22,45000,inactive,87.00,165000.00,261.00,3
-Charlie,35,70000,active,87.00,165000.00,261.00,3
