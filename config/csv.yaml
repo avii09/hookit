@@ -1,8 +1,9 @@
 pipeline:
   input:
-    type: "csv"  # Options: "csv", "json"
+    type: "firebase" # Options: "firebase", "csv"
     config:
-      filePath: "./data/input.csv" # Path to the input CSV file
+      collection: "users" # Firestore collection name (only used if input type is "firebase")
+      filePath: "./data/input.csv" # Path to the input CSV file (only used if input type is "csv")
 
   transformations:
     filter:
@@ -23,6 +24,7 @@ pipeline:
         as: "row_count"
 
   output:
-    type: "csv"  # Options: "csv", "json"
+    type: "csv" # Options: "firebase", "json", "csv"
     config:
-      filePath: "./data/output.csv" # Path to the output CSV file
+      collection: "users" # Firestore collection name (only used if output type is "firebase")
+      filePath: "./data/output.csv" # Path to the output CSV file (only used if output type is "csv" or "json")

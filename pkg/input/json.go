@@ -36,39 +36,35 @@ func ReadJSON(filePath string) ([]map[string]interface{}, error) {
 
 // ConvertMapToStringMap converts a slice of maps with interface{} values to a slice of maps with string values.
 func ConvertMapToStringMap(data []map[string]interface{}) ([]map[string]string, error) {
-	var stringData []map[string]string
-
-	// Iterate over each map (row) in the data slice.
-	for _, row := range data {
-		stringRow := make(map[string]string)
-
-		// Convert each key-value pair in the map to string.
-		for key, value := range row {
-			switch v := value.(type) {
-			case string:
-				stringRow[key] = v
-			case float64:
-				// Format float values to avoid excessive decimal places.
-				stringRow[key] = strconv.FormatFloat(v, 'f', -1, 64)
-			case int, int64:
-				// Convert integers to string.
-				stringRow[key] = fmt.Sprintf("%d", v)
-			case bool:
-				// Convert boolean values to "true"/"false".
-				stringRow[key] = strconv.FormatBool(v)
-			case nil:
-				// Handle nil values explicitly as an empty string.
-				stringRow[key] = ""
-			default:
-				// Return an error for unsupported types.
-				return nil, fmt.Errorf("unsupported value type for key '%s': %T", key, v)
-			}
-		}
-
-		stringData = append(stringData, stringRow)
-	}
-
-	return stringData, nil
+    var stringData []map[string]string
+    // Iterate over each map (row) in the data slice.
+    for _, row := range data {
+        stringRow := make(map[string]string)
+        // Convert each key-value pair in the map to string.
+        for key, value := range row {
+            switch v := value.(type) {
+            case string:
+                stringRow[key] = v
+            case float64:
+                // Format float values to avoid excessive decimal places.
+                stringRow[key] = strconv.FormatFloat(v, 'f', -1, 64)
+            case int, int64:
+                // Convert integers to string.
+                stringRow[key] = fmt.Sprintf("%d", v)
+            case bool:
+                // Convert boolean values to "true"/"false".
+                stringRow[key] = strconv.FormatBool(v)
+            case nil:
+                // Handle nil values explicitly as an empty string.
+                stringRow[key] = ""
+            default:
+                // Return an error for unsupported types.
+                return nil, fmt.Errorf("unsupported value type for key '%s': %T", key, v)
+            }
+        }
+        stringData = append(stringData, stringRow)
+    }
+    return stringData, nil
 }
 
 // ProcessJSONInput processes the input JSON based on transformations.
