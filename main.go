@@ -32,15 +32,15 @@ func main() {
 	var configFilePath string
 	switch *pipelineType {
 	case "csv":
-		configFilePath = "config/csv.yaml"
+		configFilePath = "pipelines/csv.yaml"
 	case "json":
-		configFilePath = "config/json.yaml"
+		configFilePath = "pipelines/json.yaml"
 	case "csv-to-json":
-		configFilePath = "config/csv_to_json.yaml"
+		configFilePath = "pipelines/csv_to_json.yaml"
 	case "json-to-csv":
-		configFilePath = "config/csv_to_json.yaml"
+		configFilePath = "pipelines/csv_to_json.yaml"
 	case "firebase":
-		configFilePath = "config/firebase.yaml"
+		configFilePath = "pipelines/firebase.yaml"
 	default:
 		fmt.Println("Error: Invalid pipeline type. Use '-pipeline=csv', '-pipeline=json', or '-pipeline=firebase'.")
 		os.Exit(1)

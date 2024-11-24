@@ -3,7 +3,7 @@ pipeline:
     type: "json" # Options: "firebase", "json"
     config:
       collection: "users" # Firestore collection name (only used if input type is "firebase")
-      filePath: "./data/input1.json" # Path to the input JSON file (only used if input type is "json")
+      filePath: "./data/input.json" # Path to the input JSON file (only used if input type is "json")
 
   transformations:
     filter:
