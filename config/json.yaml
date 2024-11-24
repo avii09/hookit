@@ -1,25 +1,22 @@
 pipeline:
   input:
-    type: "json"
+    type: "json" # Options: "firebase", "json"
     config:
-      filePath: "./data/input.json" # Path to the input JSON file
+      collection: "users" # Firestore collection name (only used if input type is "firebase")
+      filePath: "./data/input1.json" # Path to the input JSON file (only used if input type is "json")
 
   transformations:
-    json:
-      filter:
-        - key: "age"
-          condition: "> 25" # Keep records where 'age' is greater than 25
+    filter:
+      - key: "*" # Apply to all numeric keys
+        condition: "> 10" # Keep records where all numeric keys have values > 10
+      - key: "age" # Specific filter for key named "age"
+        condition: "> 25" # Keep records where age > 25
 
-      mapping:
-        dynamic_mapping: true # Enable dynamic mapping for JSON keys
-        custom_mapping: [] # Custom mappings can be added here, currently empty
-
-      aggregation:
-        - operation: "sum"
-          key: "salary" # Sum the 'salary' field
-          as: "total_salary" # Output the result as 'total_salary'
+    mapping:
+      dynamic_mapping: true # Automatically convert keys to lowercase
 
   output:
-    type: "json"
+    type: "firebase" # Options: "firebase", "json"
     config:
-      filePath: "./data/output.json" # Path to the output JSON file
+      collection: "users" # Firestore collection name (only used if output type is "firebase")
+      filePath: "./data/output.json" # Path to the output JSON file (only used if output type is "json")
